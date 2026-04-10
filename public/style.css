@@ -1,0 +1,246 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --pink-bg: #fde8ec;
+  --pink-hot: #f06b8a;
+  --pink-mid: #f4a0b5;
+  --pink-light: #fac8d3;
+  --yellow: #f7dc8a;
+  --yellow-light: #faedb5;
+  --text: #8a4a5a;
+  --radius: 14px;
+}
+
+body {
+  background: var(--pink-bg);
+  font-family: 'Lato', sans-serif;
+  color: var(--text);
+  min-height: 100vh;
+}
+
+/* ── Header ─────────────────────────────── */
+header {
+  text-align: center;
+  padding: 48px 24px 32px;
+}
+
+h1 {
+  font-family: 'Dancing Script', cursive;
+  font-size: clamp(2.8rem, 8vw, 5rem);
+  color: var(--pink-hot);
+  line-height: 1.1;
+  margin-bottom: 12px;
+}
+
+.subtitle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  font-size: 1rem;
+  font-weight: 300;
+  color: #b07080;
+  letter-spacing: 0.04em;
+  margin-bottom: 32px;
+}
+
+.line {
+  display: inline-block;
+  width: 48px;
+  height: 1px;
+  background: #d4a0b0;
+}
+
+/* ── Upload button ───────────────────────── */
+.upload-btn {
+  display: inline-block;
+  padding: 14px 40px;
+  border: 2px solid var(--yellow);
+  border-radius: 50px;
+  background: transparent;
+  color: var(--text);
+  font-size: 1rem;
+  font-weight: 400;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+}
+
+.upload-btn:hover {
+  background: var(--yellow-light);
+  box-shadow: 0 4px 18px rgba(247,220,138,.5);
+  transform: translateY(-2px);
+}
+
+.upload-btn:active { transform: translateY(0); }
+
+/* ── Upload progress ─────────────────────── */
+.upload-progress {
+  max-width: 360px;
+  margin: 0 auto 24px;
+  text-align: center;
+  padding: 0 24px;
+}
+
+.progress-bar {
+  height: 6px;
+  background: #f0c8d4;
+  border-radius: 99px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--pink-hot);
+  border-radius: 99px;
+  width: 0%;
+  transition: width 0.3s;
+}
+
+/* ── Masonry gallery ─────────────────────── */
+.gallery {
+  column-count: 3;
+  column-gap: 10px;
+  padding: 10px 16px 60px;
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+@media (max-width: 640px) { .gallery { column-count: 2; } }
+@media (max-width: 380px) { .gallery { column-count: 1; } }
+
+.photo-card {
+  break-inside: avoid;
+  margin-bottom: 10px;
+  border-radius: var(--radius);
+  overflow: hidden;
+  position: relative;
+  cursor: pointer;
+  background: var(--pink-light);
+  animation: fadeIn 0.4s ease both;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.photo-card img {
+  display: block;
+  width: 100%;
+  height: auto;
+  transition: transform 0.3s;
+}
+
+.photo-card:hover img { transform: scale(1.04); }
+
+.photo-card .delete-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(255,255,255,0.85);
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  font-size: 15px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s;
+  color: var(--pink-hot);
+}
+
+.photo-card:hover .delete-btn { opacity: 1; }
+
+/* ── Empty state ─────────────────────────── */
+.empty-state {
+  text-align: center;
+  padding: 60px 24px;
+  color: #c08898;
+  font-size: 1rem;
+  font-weight: 300;
+}
+
+.empty-state .icon { font-size: 3rem; margin-bottom: 12px; }
+
+/* ── Lightbox ────────────────────────────── */
+.lightbox {
+  position: fixed;
+  inset: 0;
+  background: rgba(80, 20, 40, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 24px;
+  backdrop-filter: blur(6px);
+}
+
+.lightbox img {
+  max-width: min(90vw, 800px);
+  max-height: 85vh;
+  border-radius: var(--radius);
+  box-shadow: 0 20px 60px rgba(0,0,0,.3);
+  object-fit: contain;
+}
+
+.lightbox-close {
+  position: fixed;
+  top: 20px;
+  right: 24px;
+  background: rgba(255,255,255,0.15);
+  border: none;
+  color: #fff;
+  font-size: 1.4rem;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.lightbox-close:hover { background: rgba(255,255,255,0.3); }
+
+.lightbox-delete {
+  position: fixed;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255,255,255,0.15);
+  border: 1.5px solid rgba(255,255,255,0.4);
+  color: #fff;
+  font-size: 0.9rem;
+  padding: 10px 24px;
+  border-radius: 50px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.lightbox-delete:hover { background: rgba(220,60,80,0.6); }
+
+/* ── Toast ───────────────────────────────── */
+.toast {
+  position: fixed;
+  bottom: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--pink-hot);
+  color: #fff;
+  padding: 12px 28px;
+  border-radius: 50px;
+  font-size: 0.9rem;
+  z-index: 2000;
+  box-shadow: 0 6px 24px rgba(240,107,138,.4);
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateX(-50%) translateY(16px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+.hidden { display: none !important; }
