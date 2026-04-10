@@ -44,6 +44,14 @@ h1 {
   margin-bottom: 32px;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
 .line {
   display: inline-block;
   width: 48px;
@@ -73,6 +81,27 @@ h1 {
 }
 
 .upload-btn:active { transform: translateY(0); }
+
+.secondary-btn {
+  padding: 14px 28px;
+  border: 1.5px solid rgba(138,74,90,0.18);
+  border-radius: 50px;
+  background: rgba(255,255,255,0.55);
+  color: var(--text);
+  font-size: 0.95rem;
+  font-weight: 400;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+}
+
+.secondary-btn:hover {
+  background: rgba(255,255,255,0.85);
+  box-shadow: 0 4px 18px rgba(138,74,90,0.12);
+  transform: translateY(-2px);
+}
+
+.secondary-btn:active { transform: translateY(0); }
 
 /* ── Upload progress ─────────────────────── */
 .upload-progress {
@@ -109,6 +138,12 @@ h1 {
 
 @media (max-width: 640px) { .gallery { column-count: 2; } }
 @media (max-width: 380px) { .gallery { column-count: 1; } }
+
+.gallery-actions {
+  display: flex;
+  justify-content: center;
+  padding: 0 16px 48px;
+}
 
 .photo-card {
   break-inside: avoid;

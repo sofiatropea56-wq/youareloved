@@ -1,5 +1,7 @@
 const gallery = document.getElementById('gallery');
 const fileInput = document.getElementById('fileInput');
+const refreshBtn = document.getElementById('refreshBtn');
+const loadMoreBtn = document.getElementById('loadMoreBtn');
 const uploadProgress = document.getElementById('uploadProgress');
 const progressFill = document.getElementById('progressFill');
 const progressText = document.getElementById('progressText');
@@ -10,21 +12,47 @@ const lightboxDelete = document.getElementById('lightboxDelete');
 const toast = document.getElementById('toast');
 
 let currentPhotoId = null;
+let nextCursor = null;
+let isLoadingPhotos = false;
 
 // ── Load photos ─────────────────────────────────────────────
-async function loadPhotos() {
+async function loadPhotos({ reset = false } = {}) {
+  if (isLoadingPhotos) return;
+
+  isLoadingPhotos = true;
+
+  if (reset) {
+    nextCursor = null;
+    gallery.innerHTML = '';
+    loadMoreBtn.classList.add('hidden');
+  }
+
   try {
-    const res = await fetch('/api/photos');
-    const photos = await res.json();
-    renderGallery(photos);
+    const query = new URLSearchParams();
+    if (!reset && nextCursor) query.set('cursor', nextCursor);
+
+    const suffix = query.toString() ? `?${query.toString()}` : '';
+    const res = await fetch(`/api/photos${suffix}`);
+    if (!res.ok) throw new Error();
+
+    const data = await res.json();
+    nextCursor = data.nextCursor;
+    renderGallery(data.photos, { append: !reset });
+    loadMoreBtn.classList.toggle('hidden', !nextCursor);
   } catch {
+    if (reset) renderGallery([], { append: false });
     showToast('Could not load photos.');
+  } finally {
+    isLoadingPhotos = false;
   }
 }
 
-function renderGallery(photos) {
-  gallery.innerHTML = '';
-  if (photos.length === 0) {
+function renderGallery(photos, { append = false } = {}) {
+  if (!append) {
+    gallery.innerHTML = '';
+  }
+
+  if (!append && photos.length === 0) {
     gallery.innerHTML = `
       <div class="empty-state" style="column-span:all">
         <div class="icon">🌸</div>
@@ -32,6 +60,10 @@ function renderGallery(photos) {
       </div>`;
     return;
   }
+
+  const emptyState = gallery.querySelector('.empty-state');
+  if (emptyState) emptyState.remove();
+
   photos.forEach(photo => gallery.appendChild(createCard(photo)));
 }
 
@@ -41,7 +73,7 @@ function createCard(photo) {
   card.dataset.id = photo.id;
 
   const img = document.createElement('img');
-  img.src = photo.url;
+  img.src = photo.thumbnailUrl || photo.url;
   img.alt = 'Memory';
   img.loading = 'lazy';
 
@@ -77,11 +109,11 @@ fileInput.addEventListener('change', async () => {
     progressFill.style.width = '100%';
     progressText.textContent = 'Done!';
     setTimeout(() => uploadProgress.classList.add('hidden'), 800);
-    await loadPhotos();
+    await loadPhotos({ reset: true });
     showToast('Photos uploaded!');
-  } catch {
+  } catch (error) {
     uploadProgress.classList.add('hidden');
-    showToast('Upload failed. Please try again.');
+    showToast(error.message || 'Upload failed. Please try again.');
   }
 
   fileInput.value = '';
@@ -101,8 +133,17 @@ function uploadWithProgress(formData) {
     });
 
     xhr.addEventListener('load', () => {
-      if (xhr.status >= 200 && xhr.status < 300) resolve(JSON.parse(xhr.responseText));
-      else reject(new Error(xhr.statusText));
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve(JSON.parse(xhr.responseText));
+        return;
+      }
+
+      try {
+        const error = JSON.parse(xhr.responseText);
+        reject(new Error(error.error || xhr.statusText));
+      } catch {
+        reject(new Error(xhr.statusText || 'Upload failed'));
+      }
     });
 
     xhr.addEventListener('error', reject);
@@ -115,10 +156,8 @@ async function deletePhoto(id) {
   try {
     const res = await fetch(`/api/photos/${id}`, { method: 'DELETE' });
     if (!res.ok) throw new Error();
-    const card = gallery.querySelector(`[data-id="${id}"]`);
-    if (card) card.remove();
     closeLightbox();
-    if (gallery.children.length === 0) renderGallery([]);
+    await loadPhotos({ reset: true });
     showToast('Photo deleted.');
   } catch {
     showToast('Could not delete photo.');
@@ -144,6 +183,9 @@ lightboxClose.addEventListener('click', closeLightbox);
 lightbox.addEventListener('click', e => { if (e.target === lightbox) closeLightbox(); });
 lightboxDelete.addEventListener('click', () => { if (currentPhotoId) deletePhoto(currentPhotoId); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
+refreshBtn.addEventListener('click', () => loadPhotos({ reset: true }));
+loadMoreBtn.addEventListener('click', () => loadPhotos());
+window.addEventListener('focus', () => loadPhotos({ reset: true }));
 
 // ── Toast ────────────────────────────────────────────────────
 let toastTimer;
@@ -154,6 +196,4 @@ function showToast(msg) {
   toastTimer = setTimeout(() => toast.classList.add('hidden'), 3000);
 }
 
-// ── Poll for new photos every 10s ────────────────────────────
-loadPhotos();
-setInterval(loadPhotos, 10000);
+loadPhotos({ reset: true });

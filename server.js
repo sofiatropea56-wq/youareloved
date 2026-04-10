@@ -1,29 +1,17 @@
+require('dotenv').config({ quiet: true });
+
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
-const fs = require('fs');
-const { v4: uuidv4 } = require('uuid');
+const { photoStore, providerName } = require('./lib/photo-store');
 
 const app = express();
-const PORT = 3000;
-
-const UPLOADS_DIR = path.join(__dirname, 'uploads');
-const DATA_FILE = path.join(__dirname, 'photos.json');
-
-if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR);
-if (!fs.existsSync(DATA_FILE)) fs.writeFileSync(DATA_FILE, JSON.stringify([]));
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, UPLOADS_DIR),
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    cb(null, uuidv4() + ext);
-  }
-});
+const PORT = Number(process.env.PORT) || 3000;
+const maxFileSizeMb = providerName === 'cloudinary' ? 10 : 20;
 
 const upload = multer({
-  storage,
-  limits: { fileSize: 20 * 1024 * 1024 },
+  storage: multer.memoryStorage(),
+  limits: { fileSize: maxFileSizeMb * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const allowed = /jpeg|jpg|png|gif|webp/;
     if (allowed.test(file.mimetype)) cb(null, true);
@@ -31,50 +19,64 @@ const upload = multer({
   }
 });
 
-function readPhotos() {
-  return JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
-}
-
-function writePhotos(photos) {
-  fs.writeFileSync(DATA_FILE, JSON.stringify(photos, null, 2));
-}
-
 app.use(express.static(path.join(__dirname, 'public')));
-app.use('/uploads', express.static(UPLOADS_DIR));
+if (providerName === 'local') {
+  app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+}
 
-app.get('/api/photos', (req, res) => {
-  res.json(readPhotos());
+app.get('/api/photos', async (req, res, next) => {
+  try {
+    const photos = await photoStore.listPhotos({ cursor: req.query.cursor || null });
+    res.json(photos);
+  } catch (error) {
+    next(error);
+  }
 });
 
-app.post('/api/photos', upload.array('photos', 50), (req, res) => {
+app.post('/api/photos', upload.array('photos', 50), async (req, res, next) => {
   if (!req.files || req.files.length === 0) {
     return res.status(400).json({ error: 'No files uploaded' });
   }
-  const photos = readPhotos();
-  const newPhotos = req.files.map(file => ({
-    id: uuidv4(),
-    filename: file.filename,
-    url: `/uploads/${file.filename}`,
-    uploadedAt: new Date().toISOString()
-  }));
-  photos.unshift(...newPhotos);
-  writePhotos(photos);
-  res.json(newPhotos);
+
+  try {
+    const photos = await photoStore.uploadPhotos(req.files);
+    res.json({ photos });
+  } catch (error) {
+    next(error);
+  }
 });
 
-app.delete('/api/photos/:id', (req, res) => {
-  const photos = readPhotos();
-  const photo = photos.find(p => p.id === req.params.id);
-  if (!photo) return res.status(404).json({ error: 'Photo not found' });
+app.delete('/api/photos/:id', async (req, res, next) => {
+  try {
+    const deleted = await photoStore.deletePhoto(req.params.id);
+    if (!deleted) {
+      return res.status(404).json({ error: 'Photo not found' });
+    }
 
-  const filePath = path.join(UPLOADS_DIR, photo.filename);
-  if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    res.json({ success: true });
+  } catch (error) {
+    next(error);
+  }
+});
 
-  const updated = photos.filter(p => p.id !== req.params.id);
-  writePhotos(updated);
-  res.json({ success: true });
+app.use((err, req, res, next) => {
+  if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE') {
+    return res
+      .status(413)
+      .json({ error: `Each image must be ${maxFileSizeMb} MB or smaller.` });
+  }
+
+  const statusCode = err.http_code || err.statusCode || 500;
+  const message = statusCode >= 500 ? 'Something went wrong while processing the photo.' : err.message;
+
+  if (statusCode >= 500) {
+    console.error(err);
+  }
+
+  res.status(statusCode).json({ error: message || 'Unexpected error' });
 });
 
 app.listen(PORT, () => {
   console.log(`You Are Loved is running at http://localhost:${PORT}`);
+  console.log(`Photo storage provider: ${providerName}`);
 });

@@ -13,10 +13,13 @@
     <h1>You Are Loved</h1>
     <p class="subtitle"><span class="line"></span> A place for your memories <span class="line"></span></p>
 
-    <label class="upload-btn" id="uploadLabel">
-      Upload Photos
-      <input type="file" id="fileInput" accept="image/*" multiple hidden />
-    </label>
+    <div class="header-actions">
+      <button class="secondary-btn" id="refreshBtn" type="button">Refresh Gallery</button>
+      <label class="upload-btn" id="uploadLabel">
+        Upload Photos
+        <input type="file" id="fileInput" accept="image/*" multiple hidden />
+      </label>
+    </div>
   </header>
 
   <div id="uploadProgress" class="upload-progress hidden">
@@ -25,6 +28,10 @@
   </div>
 
   <main id="gallery" class="gallery"></main>
+
+  <div class="gallery-actions">
+    <button id="loadMoreBtn" class="secondary-btn hidden" type="button">Load More</button>
+  </div>
 
   <div id="lightbox" class="lightbox hidden">
     <button class="lightbox-close" id="lightboxClose">&#x2715;</button>
